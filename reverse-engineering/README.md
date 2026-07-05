@@ -13,6 +13,7 @@ private (`github.com/ROCKNIX/LinuxLoader` → HTTP 404); this recovers the delta
 | [`ANALYSIS.md`](ANALYSIS.md) | Full report: provenance, container format, base identification, and the complete commit→binary-delta modification catalogue. |
 | [`METHODOLOGY.md`](METHODOLOGY.md) | Reproduce the analysis; obtain the upstream base; apply the delta; byte-verify a 1:1 rebuild. |
 | [`REPACK.md`](REPACK.md) | Repack reconstructed C into a flashable signed ABL: FV packing, MBN signing, the qtestsign key finding, and what's verified. |
+| [`REGLINUX_BLOCK.md`](REGLINUX_BLOCK.md) | The targeted boot-time exclusion of the REGLINUX distro (partition label + `\boot\reglinux.update` marker file); where it lives and how it survived string removal. |
 | [`reconstructed/`](reconstructed/) | EDK2-style C reconstruction of the ROCKNIX delta (`BootCFW`, `GetSocName`, `VerifyClusterSize`, …). |
 | [`tools/`](tools/) | Reproducible pipeline: blob recovery, PE extraction, version diffing, disassembly, **FV pack/unpack, MBN sign, round-trip proof**. |
 

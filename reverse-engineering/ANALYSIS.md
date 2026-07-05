@@ -185,6 +185,12 @@ FirmWare) — plus a set of fastboot-menu tools onto the stock Qualcomm ABL:
 6. **Auto-update** of the ABL itself, versioned by `RocknixAblVer`.
 7. **`VerifyClusterSize`**: refuses to boot a FAT ESP whose cluster size is not
    16 KB (16384), showing an `INVALID CLUSTER SIZE` screen.
+8. **REGLINUX exclusion** (`IsPartitionValid`): a targeted boot-time block of the
+   REGLINUX distribution, detected by GPT label `REGLINUX` **or** the marker file
+   `\boot\reglinux.update`, ending in an `UNSUPPORTED` screen. Introduced with
+   explanatory strings in commit `097e3bb2`; the strings were stripped in
+   `41156820` but the mechanism persists in every shipped build. Full writeup in
+   [`REGLINUX_BLOCK.md`](REGLINUX_BLOCK.md).
 
 Reconstructed C for these is under
 [`reconstructed/QcomModulePkg/Application/LinuxLoader/`](reconstructed/).
