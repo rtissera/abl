@@ -68,6 +68,50 @@ Relevant `.data` neighbourhood (final build), verbatim:
 0x430cc  Close(Root)
 ```
 
+## Complete marker & file inventory
+
+Every partition label and file path the ABL keys off (all UTF-16LE, embedded in
+`.text` rodata; **present and identical in all four shipped SoC builds** —
+SM6115/SM8250/SM8550/SM8650):
+
+### REGLINUX detection (the exclusion)
+| rva | string | role |
+|-----|--------|------|
+| `0x71f36` | `REGLINUX` | blocked GPT partition label (`StrCmp` @ `0x4304c`) |
+| `0x71f48` | `\boot\reglinux.update` | blocked-if-present marker file (`Open` @ `0x43058`) |
+
+### Boot-method file lists (what it *will* boot)
+Two boot-method descriptors, each an ordered path list terminated by NULL and
+followed by a 16-byte GUID, live in a table at `.text 0x74ce8` / `0x74d10`:
+
+| rva | string | method |
+|-----|--------|--------|
+| `0x71f74` | `\KERNEL` | kernel/boot-image method (`BootImg`) |
+| `0x71f84` | `\boot\Image` | kernel/boot-image method (`BootImg`) |
+| `0x71f9c` | `\EFI\ROCKNIX\BOOTAA64.EFI` | ESP / GRUB method (`BootESP`) |
+| `0x71fd0` | `\EFI\BOOT\BOOTAA64.EFI` | ESP / GRUB method (`BootESP`) |
+
+So a volume boots only if it is **not** REGLINUX **and** exposes one of these
+four files; the kernel paths feed `BootImg`, the `BOOTAA64.EFI` paths feed
+`BootESP` (matching the `BootCFW` dispatch in `BootCFW.c`).
+
+### Partition labels used for selection / logic
+| rva | label | refs (code sites) |
+|-----|-------|-------------------|
+| `0x71ffe` | `ROCKNIX` | `0x4443c 0x44658 0x44ae8` |
+| `0x72020` | `STORAGE` | `0x44444 0x44afc` |
+| `0x7200e` | `userdata` | `0x44434 0x44ad4 0x44b98 0x52384` |
+| `0x71c28` | `system` | `0x8558 0x3ef08 0x5435c` |
+| `0x71c02` | `recovery` | `0x7964 0x7e3c 0x802c 0xac4c 0xaf30` |
+| `0x71d0c` | `misc` | `0x2d254` |
+| `0x720e8` | `frp` | `0x5009c` |
+| `0x72198` | `metadata` | — |
+
+The earlier `097e3bb2` form also carried an explicit label **whitelist**
+`{ROCKNIX, KNULLI, BATOCERA}` (the counterpart to the REGLINUX blacklist); the
+`KNULLI`/`BATOCERA` labels were dropped from `.text` when the whitelist code was
+removed in `41156820`, while the REGLINUX blacklist stayed.
+
 ## Evolution (why "the strings were removed" is misleading)
 
 Tracing the ~20 historical blob versions in this repo's git history
