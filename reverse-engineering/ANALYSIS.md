@@ -207,6 +207,8 @@ Reconstructed C for these is under
 | `BootImg` / `BootESP` bodies            | medium     | full disassembly; control flow + magic/paths/strings verified |
 | `IsPartitionValid` (REGLINUX gate)      | high       | full disassembly; both fingerprints + UNSUPPORTED path        |
 | `RocknixAblVer` read/write              | medium     | full disassembly; tag build + DevInfo r/w + strings verified  |
+| `SetAndroidBootMode` (DevInfo state)    | medium     | full disassembly; field offsets + write + strings verified    |
+| boot-mode *decision* (default/Vol-Up)   | located    | routine identified; body on the dev-box worklist              |
 | menus (SystemStats/Nuke/Uninstall/Model)| medium    | string map + partial disassembly; UI layout inferred          |
 | everything else (stock ABL/EDK2)       | n/a        | unmodified upstream — see §3 for how to obtain the exact base  |
 

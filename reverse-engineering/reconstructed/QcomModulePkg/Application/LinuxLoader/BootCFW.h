@@ -78,4 +78,9 @@ BOOLEAN    EFIAPI CheckRocknixAblVer (VOID);  // TRUE if stored tag matches runn
 //
 BOOLEAN    EFIAPI IsPartitionValid (IN EFI_HANDLE Handle);
 
+//
+// Persistent boot-mode state (BootMode.c). Enable = Android, clear = Linux.
+//
+EFI_STATUS EFIAPI SetAndroidBootMode (IN BOOLEAN Enable);
+
 #endif // __ROCKNIX_BOOTCFW_H__
