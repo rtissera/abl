@@ -79,3 +79,100 @@ SetAndroidBootMode (
 // "...Write Device Model: %r" messages respectively; reconstruct alongside once
 // their DevInfo field offsets are confirmed against the base struct.
 //
+
+//
+// ============================================================================
+//  The boot-mode DECISION (1:1) - the core ROCKNIX default-Linux / Vol-Up-Android
+//  logic, inlined in the LinuxLoader entry. Reconstructed exactly from the
+//  shipped final SM8250/SM8550 build, .text 0x2144..0x218c.
+// ============================================================================
+//
+// Trivial DevInfo getters (each is `ldrb w0,[global]; ret`), verified:
+//   GetAndroidBootMode()  .text 0x3b1bc  -> byte 0x90578 (DevInfo[+0xd08])
+//
+// Key scan codes (Qualcomm key-press enum; values verified from the compares):
+//   1 = Volume-Up  (README: "Hold Volume Up during boot to force Android")
+//   5 = secondary force-Android key/combo
+//
+// Global flags read here (verified offsets):
+//   gDevInfo state byte 0x7fd58  -> Fastboot requested (checked first)
+//
+// Disassembly (canonical):
+//   0x2144  ldrb w8,[Fastboot]; tbnz w8,#0 -> Fastboot            (0x2618)
+//   0x214c  ZeroMem(&BootInfo, 0x468)
+//   0x215c  GetBootModeInfo(&Info)          ; fills the force-Android flag [sp+8]
+//   0x2164  if (GetAndroidBootMode())       -> Android            (0x234c)
+//   0x2170  if (ForceAndroid  [sp+8])       -> Android
+//   0x2178  if (KeyPress == 1)              -> Android            ; Volume-Up
+//   0x2184  if (KeyPress == 5)              -> Android
+//   0x218c  BootCFW()                       ; DEFAULT = Linux     (0x43254)
+//   0x2190  ShowRebootPrompt()              ; only if BootCFW returned (failed)
+//
+// KeyPress is the key read earlier in the entry (logged as "KeyPress:%u,
+// BootReason:%u" @ .text 0x2054, stored at [sp+0x18]); the force flag comes from
+// GetBootModeInfo. Modelled together below for clarity; the decision predicate
+// is exact.
+//
+
+#define KEY_VOLUME_UP     1
+#define KEY_FORCE_ANDROID 5
+
+BOOLEAN    EFIAPI GetAndroidBootMode (VOID);   // .text 0x3b1bc (DevInfo[+0xd08])
+VOID       GetBootModeInfo (OUT VOID *Info);   // .text 0x2e300 (KeyPress + force flag)
+BOOLEAN    IsFastbootRequested (VOID);         // DevInfo Fastboot state 0x7fd58
+VOID       EnterFastboot (VOID);               // 0x2618
+EFI_STATUS BootAndroid (VOID);                 // 0x234c (LoadImageAndAuth + BootLinux)
+BOOLEAN    ShowRebootPrompt (VOID);            // 0x3b200
+
+typedef struct {
+  UINT8   Reserved[0x10];
+  UINT8   ForceAndroid;   // set by GetBootModeInfo (misc/force-normal-boot etc.)
+  UINT8   Pad[0x0f];
+  UINT32  KeyPress;       // +0x18 relative to the on-stack info block
+} ROCKNIX_BOOTMODE_INFO;
+
+/**
+  Resolve and execute the boot target. Boots Android when the mode is explicitly
+  Android, when a force flag is set, or when Volume-Up (or the secondary force
+  key) is held at boot; otherwise boots Linux via BootCFW (the ROCKNIX default).
+  Only returns if every boot path failed.
+**/
+VOID
+EFIAPI
+LinuxLoaderBootDecision (
+  VOID
+  )
+{
+  ROCKNIX_BOOTMODE_INFO  Info;
+
+  //
+  // Fastboot takes precedence over the OS decision.
+  //
+  if (IsFastbootRequested ()) {
+    EnterFastboot ();
+    return;
+  }
+
+  ZeroMem (&Info, sizeof (Info));      // .text 0x214c  (0x468-byte boot-info block)
+  GetBootModeInfo (&Info);             // .text 0x215c/0x2160
+
+  //
+  // Boot Android if: persisted mode is Android, OR a force flag is set,
+  // OR Volume-Up (1) / the secondary force key (5) is held at boot.
+  //
+  if (GetAndroidBootMode () ||
+      Info.ForceAndroid ||
+      Info.KeyPress == KEY_VOLUME_UP ||
+      Info.KeyPress == KEY_FORCE_ANDROID) {
+    BootAndroid ();                    // .text 0x234c
+    return;
+  }
+
+  //
+  // Default: boot Linux (ROCKNIX / Batocera / Knulli) via the custom-firmware
+  // path. BootCFW only returns on total failure, after which the reboot prompt
+  // / "LINUX NOT FOUND" screen is shown.
+  //
+  BootCFW ();                          // .text 0x43254  (DEFAULT)
+  ShowRebootPrompt ();                 // .text 0x3b200
+}
