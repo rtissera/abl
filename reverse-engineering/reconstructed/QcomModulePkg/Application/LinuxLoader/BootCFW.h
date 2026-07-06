@@ -67,4 +67,15 @@ BootCFW (
 EFI_STATUS EFIAPI BootImg (VOID);   // Android-style boot image container path
 EFI_STATUS EFIAPI BootESP (VOID);   // EFI System Partition (bootaa64.efi / GRUB)
 
+//
+// ROCKNIX ABL self-version stamp / auto-update (RocknixAblVer.c).
+//
+EFI_STATUS EFIAPI SetRocknixAblVer (VOID);    // stamp "ROCKNIX-ABL-<ver>" to DevInfo
+BOOLEAN    EFIAPI CheckRocknixAblVer (VOID);  // TRUE if stored tag matches running ABL
+
+//
+// Partition-validation gate incl. the REGLINUX exclusion (PartitionValidation.c).
+//
+BOOLEAN    EFIAPI IsPartitionValid (IN EFI_HANDLE Handle);
+
 #endif // __ROCKNIX_BOOTCFW_H__

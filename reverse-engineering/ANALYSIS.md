@@ -204,7 +204,9 @@ Reconstructed C for these is under
 | `GetSocName` (chip-ID → name table)    | **exact**  | full disassembly; every switch case + string resolved         |
 | `VerifyClusterSize` control flow       | high       | full disassembly; BPB read + 16 KB check + error menu         |
 | `BootCFW` dispatcher control flow      | high       | full disassembly; DEBUG strings pin each branch               |
-| `BootImg` / `BootESP` structure        | medium     | disassembly + string map; helper prototypes inferred          |
+| `BootImg` / `BootESP` bodies            | medium     | full disassembly; control flow + magic/paths/strings verified |
+| `IsPartitionValid` (REGLINUX gate)      | high       | full disassembly; both fingerprints + UNSUPPORTED path        |
+| `RocknixAblVer` read/write              | medium     | full disassembly; tag build + DevInfo r/w + strings verified  |
 | menus (SystemStats/Nuke/Uninstall/Model)| medium    | string map + partial disassembly; UI layout inferred          |
 | everything else (stock ABL/EDK2)       | n/a        | unmodified upstream — see §3 for how to obtain the exact base  |
 

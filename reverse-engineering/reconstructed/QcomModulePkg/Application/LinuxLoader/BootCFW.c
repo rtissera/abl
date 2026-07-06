@@ -123,3 +123,77 @@ BootCFW (
 
   return Status;
 }
+
+//
+// --- BootImg: Android-style boot-image container path ----------------------
+//
+// Reads a boot image (from the kernel/image paths \KERNEL, \boot\Image), checks
+// the "ANDROID!"/"ANDROID-BOOT!" magic and header, validates size, then
+// LoadImageAndAuth + BootLinux. Reconstructed from .text ~0x43310..0x44200;
+// control flow and strings verified, header/loader helper prototypes inferred
+// (medium confidence). Added in commit 91c0ba8.
+//
+#define BOOT_MAGIC      "ANDROID!"       // .data 0x65733
+#define BOOT_MAGIC_SIZE 8
+
+EFI_STATUS ReadBootImageHeader (VOID *Vol, VOID *Hdr, UINTN Size); // .text 0x56428
+EFI_STATUS LoadImageAndAuth (VOID *Info);                          // authenticate+load
+EFI_STATUS BootLinux (VOID *Info);                                 // hand off to kernel
+
+EFI_STATUS
+EFIAPI
+BootImg (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  UINT8       Header[BOOT_MAGIC_SIZE];
+  VOID       *Vol = NULL;    // current boot volume/handle
+
+  Status = ReadBootImageHeader (Vol, Header, sizeof (Header));
+  if (EFI_ERROR (Status) ||
+      CompareMem (Header, BOOT_MAGIC, BOOT_MAGIC_SIZE) != 0) {
+    DEBUG ((EFI_D_ERROR, "BootImg: Invalid boot image magic\n"));
+    return EFI_NOT_FOUND;
+  }
+  DEBUG ((EFI_D_INFO, "BootImg: Valid boot image header found\n"));
+
+  DEBUG ((EFI_D_INFO, "BootImg: Calling LoadImageAndAuth...\n"));
+  Status = LoadImageAndAuth (Vol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "BootImg: Failed to load/authenticate boot image: %r\n", Status));
+    return Status;
+  }
+
+  DEBUG ((EFI_D_INFO, "BootImg: Starting BootLinux...\n"));
+  Status = BootLinux (Vol);
+  DEBUG ((EFI_D_ERROR, "BootImg: BootLinux returned unexpectedly\n"));
+  return Status;
+}
+
+//
+// --- BootESP: EFI System Partition path (bootaa64.efi / GRUB) ---------------
+//
+// Loads and starts \EFI\ROCKNIX\BOOTAA64.EFI (then \EFI\BOOT\BOOTAA64.EFI) from
+// the ESP. Reconstructed from .text ~0x43ae0..0x43c1c. Added in commit 894f0fc /
+// finalized 91c0ba8.
+//
+EFI_STATUS LoadBootAA64AndStart (CONST CHAR16 *Path);   // load+StartImage a PE app
+
+EFI_STATUS
+EFIAPI
+BootESP (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = LoadBootAA64AndStart (L"\\EFI\\ROCKNIX\\BOOTAA64.EFI");   // .data 0x71f9c
+  if (EFI_ERROR (Status)) {
+    Status = LoadBootAA64AndStart (L"\\EFI\\BOOT\\BOOTAA64.EFI");    // .data 0x71fd0
+  }
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "BootESP: LoadBootAA64AndStart failed: %r\n", Status));
+  }
+  return Status;
+}
